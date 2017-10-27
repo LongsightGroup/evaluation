@@ -18,9 +18,13 @@ package org.sakaiproject.evaluation.tool.renderers;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +36,7 @@ import org.sakaiproject.evaluation.logic.EvalEvaluationService;
 import org.sakaiproject.evaluation.logic.EvalEvaluationSetupService;
 import org.sakaiproject.evaluation.logic.EvalSettings;
 import org.sakaiproject.evaluation.logic.model.EvalGroup;
+import org.sakaiproject.evaluation.model.EvalAssignUser;
 import org.sakaiproject.evaluation.model.EvalEvaluation;
 import org.sakaiproject.evaluation.tool.producers.ControlEvaluationsProducer;
 import org.sakaiproject.evaluation.tool.producers.EvaluationSettingsProducer;
@@ -182,6 +187,12 @@ public class AdminBoxRenderer {
             // admins
             Map<Long, List<EvalGroup>> evalGroups = evaluationService.getEvalGroupsForEval(evalIds, false, null);
 
+            List<EvalGroup> viewRespondersGroups = commonLogic.getEvalGroupsForUser(currentUserId, EvalConstants.PERM_VIEW_RESPONDERS);
+            List<String> viewRespondersGroupIds = new ArrayList<>();
+            for (EvalGroup allowedGroup : viewRespondersGroups) {
+                viewRespondersGroupIds.add(allowedGroup.evalGroupId);
+            }
+
             for( EvalEvaluation eval : evals )
             {
                 String evalState = evaluationService.returnAndFixEvalState(eval, true);
@@ -235,10 +246,12 @@ public class AdminBoxRenderer {
                         LOG.debug("group responses=" + responsesCount + ", enrollments=" + enrollmentsCount + ", str=" + responseString);
                     }
 
-                    boolean allowedViewResponders = true;
+                    boolean allowedViewResponders = false;
+                    if (!viewRespondersGroupIds.isEmpty() && viewRespondersGroupIds.contains(group.evalGroupId)) {
+                        allowedViewResponders = true;    
+                    }
                     boolean allowedEmailStudents = true;
                     if(userReadonlyAdmin && !currentUserId.equals(eval.getOwner())) {
-                        allowedViewResponders = false;
                         allowedEmailStudents = false;
                     }
                     RenderingUtils.renderReponseRateColumn(evalrow, eval.getId(), responsesNeeded,
@@ -246,9 +259,47 @@ public class AdminBoxRenderer {
                     
                     // owner can view the results but only early IF the setting is enabled
                     boolean viewResultsEval = viewResultsIgnoreDates ? true : EvalUtils.checkStateAfter(evalState, EvalConstants.EVALUATION_STATE_VIEWABLE, true);
+
                     // now render the results links depending on what the user is allowed to see
-                    RenderingUtils.renderResultsColumn(evalrow, eval, null, eval.getSafeViewDate(), df,
-                                                                                                    responsesNeeded, responsesRequired, viewResultsEval);
+                    Date resultsAvailableDate = eval.getSafeViewDate();
+
+                    boolean allowedInstructor = false;
+                    boolean instructorViewResults = false;
+                    Boolean instructorAllowedViewResults = (Boolean) settings.get(EvalSettings.INSTRUCTOR_ALLOWED_VIEW_RESULTS);
+                    if (instructorAllowedViewResults == null) {
+                        instructorViewResults = true;
+                    } else if (instructorAllowedViewResults) {
+                        instructorViewResults = true;
+                    }
+
+                    if (instructorViewResults) {
+                        // generate a hashmap of the assign types for this user to the groups for those types
+                        HashMap<String, Set<String>> typeToEvalGroupId = new HashMap<>();
+
+                        List<EvalAssignUser> userAssignments = evaluationService.getParticipantsForEval(eval.getId(), currentUserId, new String[] {group.evalGroupId}, null, null, null, null);
+                        for (EvalAssignUser eau : userAssignments) {
+                            String type = eau.getType();
+                            if (! typeToEvalGroupId.containsKey(type)) {
+                                typeToEvalGroupId.put(type, new HashSet<>());
+                            }
+                            typeToEvalGroupId.get(type).add(eau.getEvalGroupId());
+                        }
+
+                        if (typeToEvalGroupId.containsKey(EvalAssignUser.TYPE_EVALUATEE) || userAdmin) {
+                            if ((eval.getInstructorViewResults() && (eval.getOwner().equals(currentUserId) || userAdmin)) || eval.getInstructorViewAllResults()) {
+                                allowedInstructor = true;
+                            }
+                        }
+                    }
+
+                    if (allowedInstructor) {
+                        resultsAvailableDate = eval.getInstructorsDate();
+                        if (eval.getInstructorsDate() != null) {
+                            viewResultsEval = true;
+                        }
+                    }
+
+                    RenderingUtils.renderResultsColumn(evalrow, eval, null, resultsAvailableDate, df, responsesNeeded, responsesRequired, viewResultsEval);
                 }
             }
         }

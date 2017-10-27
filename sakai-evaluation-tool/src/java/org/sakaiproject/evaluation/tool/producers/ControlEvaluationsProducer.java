@@ -18,8 +18,10 @@ import org.sakaiproject.evaluation.beans.EvalBeanUtils;
 import org.sakaiproject.evaluation.constant.EvalConstants;
 import org.sakaiproject.evaluation.logic.*;
 import org.sakaiproject.evaluation.logic.entity.EvalCategoryEntityProvider;
+import org.sakaiproject.evaluation.logic.model.EvalGroup;
 import org.sakaiproject.evaluation.logic.model.EvalUser;
 import org.sakaiproject.evaluation.model.EvalAssignGroup;
+import org.sakaiproject.evaluation.model.EvalAssignUser;
 import org.sakaiproject.evaluation.model.EvalEvaluation;
 import org.sakaiproject.evaluation.tool.renderers.HumanDateRenderer;
 import org.sakaiproject.evaluation.tool.renderers.NavBarRenderer;
@@ -27,6 +29,7 @@ import org.sakaiproject.evaluation.tool.utils.RenderingUtils;
 import org.sakaiproject.evaluation.tool.viewparams.EvalListParameters;
 import org.sakaiproject.evaluation.tool.viewparams.EvalViewParameters;
 import org.sakaiproject.evaluation.utils.EvalUtils;
+import org.sakaiproject.evaluation.logic.model.EvalGroup;
 import uk.org.ponder.rsf.components.*;
 import uk.org.ponder.rsf.components.decorators.DecoratorList;
 import uk.org.ponder.rsf.components.decorators.UIStyleDecorator;
@@ -123,6 +126,7 @@ public class ControlEvaluationsProducer extends EvalCommonProducer implements Vi
 
       String currentUserId = commonLogic.getCurrentUserId();
       boolean userReadonlyAdmin = commonLogic.isUserReadonlyAdmin(currentUserId);
+      boolean isUserAdmin = commonLogic.isUserAdmin(currentUserId);
 
       /*
        * top links here
@@ -362,10 +366,21 @@ public class ControlEvaluationsProducer extends EvalCommonProducer implements Vi
             int responsesNeeded = evalBeanUtils.getResponsesNeededToViewForResponseRate(responsesCount, enrollmentsCount);
             String responseString = EvalUtils.makeResponseRateStringFromCounts(responsesCount, enrollmentsCount);
 
-            boolean allowedViewResponders = true;
+            boolean allowedViewResponders = false;
+            List<EvalGroup> allowedGroups = commonLogic.getEvalGroupsForUser(currentUserId, EvalConstants.PERM_VIEW_RESPONDERS);
+            List<String> allowedGroupIds = new ArrayList<>();
+            for (EvalGroup allowedGroup : allowedGroups) {
+                allowedGroupIds.add(allowedGroup.evalGroupId);
+            }
+            for (EvalGroup evalGroup : evaluationService.getEvalGroupsForEval(new Long[] {evaluation.getId()}, false, true).get(evaluation.getId())) {
+                if (!allowedGroupIds.isEmpty() && allowedGroupIds.contains(evalGroup.evalGroupId)) {
+                    allowedViewResponders = true;
+                    break;
+                }
+            }
+
             boolean allowedEmailStudents = true;
             if(userReadonlyAdmin && !currentUserId.equals(evaluation.getOwner())) {
-                allowedViewResponders = false;
                 allowedEmailStudents = false;
             }
 
@@ -375,8 +390,45 @@ public class ControlEvaluationsProducer extends EvalCommonProducer implements Vi
             // owner can view the results but only early IF the setting is enabled
             boolean viewResultsEval = viewResultsIgnoreDates;
             // now render the results links depending on what the user is allowed to see
-            RenderingUtils.renderResultsColumn(evaluationRow, evaluation, null, evaluation.getSafeViewDate(), df, 
-                    responsesNeeded, responsesRequired, viewResultsEval);
+            Date resultsAvailableDate = evaluation.getSafeViewDate();
+
+            boolean allowedInstructor = false;
+            boolean instructorViewResults = false;
+            Boolean instructorAllowedViewResults = (Boolean) settings.get(EvalSettings.INSTRUCTOR_ALLOWED_VIEW_RESULTS);
+            if (instructorAllowedViewResults == null) {
+                instructorViewResults = true;
+            } else if (instructorAllowedViewResults) {
+                instructorViewResults = true;
+            }
+
+            if (instructorViewResults) {
+                // generate a hashmap of the assign types for this user to the groups for those types
+                HashMap<String, Set<String>> typeToEvalGroupId = new HashMap<>();
+
+                List<EvalAssignUser> userAssignments = evaluationService.getParticipantsForEval(evaluation.getId(), currentUserId, null, null, null, null, null);
+                for (EvalAssignUser eau : userAssignments) {
+                    String type = eau.getType();
+                    if (! typeToEvalGroupId.containsKey(type)) {
+                        typeToEvalGroupId.put(type, new HashSet<>());
+                    }
+                    typeToEvalGroupId.get(type).add(eau.getEvalGroupId());
+                }
+
+                if (typeToEvalGroupId.containsKey(EvalAssignUser.TYPE_EVALUATEE) || isUserAdmin) {
+                    if ((evaluation.getInstructorViewResults() && (evaluation.getOwner().equals(currentUserId) || isUserAdmin)) || evaluation.getInstructorViewAllResults()) {
+                        allowedInstructor = true;
+                    }
+                }
+            }
+
+            if (allowedInstructor) {
+                viewResultsEval = true;
+                if (evaluation.getInstructorsDate() != null) {
+                    resultsAvailableDate = evaluation.getInstructorsDate();
+                }
+            }
+
+            RenderingUtils.renderResultsColumn(evaluationRow, evaluation, null, resultsAvailableDate, df, responsesNeeded, responsesRequired, viewResultsEval);
          }
       } else {
          UIMessage.make(tofill, "no-active-evals", "controlevaluations.active.none");
@@ -456,10 +508,22 @@ public class ControlEvaluationsProducer extends EvalCommonProducer implements Vi
             String responseString = EvalUtils.makeResponseRateStringFromCounts(responsesCount, enrollmentsCount);
             String evalState = EvalUtils.getEvaluationState(evaluation, false);
 
-            boolean allowedViewResponders = true;
+
+            boolean allowedViewResponders = false;
+            List<EvalGroup> allowedGroups = commonLogic.getEvalGroupsForUser(currentUserId, EvalConstants.PERM_VIEW_RESPONDERS);
+            List<String> allowedGroupIds = new ArrayList<>();
+            for (EvalGroup allowedGroup : allowedGroups) {
+                allowedGroupIds.add(allowedGroup.evalGroupId);
+            }
+            for (EvalGroup evalGroup : evaluationService.getEvalGroupsForEval(new Long[] {evaluation.getId()}, false, true).get(evaluation.getId())) {
+                if (!allowedGroupIds.isEmpty() && allowedGroupIds.contains(evalGroup.evalGroupId)) {
+                    allowedViewResponders = true;
+                    break;
+                }
+            }
+
             boolean allowedEmailStudents = true;
             if(userReadonlyAdmin && !currentUserId.equals(evaluation.getOwner())) {
-                allowedViewResponders = false;
                 allowedEmailStudents = false;
             }
             RenderingUtils.renderReponseRateColumn(evaluationRow, evaluation.getId(), responsesNeeded, 

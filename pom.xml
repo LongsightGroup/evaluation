@@ -32,28 +32,22 @@
     </description>
     <url>http://bugs.sakaiproject.org/confluence/display/EVALSYS/Home</url>
     <packaging>pom</packaging>
-    <version>13-SNAPSHOT</version><!--eval.version-->
+    <version>11-SNAPSHOT</version><!--eval.version-->
     <inceptionYear>2005</inceptionYear>
     
     <parent>
         <groupId>org.sakaiproject</groupId>
         <artifactId>master</artifactId>
-        <version>13-SNAPSHOT</version>
+        <version>11-SNAPSHOT</version>
+        <relativePath>../master/pom.xml</relativePath>
     </parent>
 
     <properties>
-        <hierarchy.version>13-SNAPSHOT</hierarchy.version>
+        <hierarchy.version>11-SNAPSHOT</hierarchy.version>
         <evalsys.pom.basedir>${project.basedir}</evalsys.pom.basedir>
         <evalsys.project.name>${project.name}</evalsys.project.name>
         <evalsys.project.year>${project.inceptionYear}</evalsys.project.year>
     </properties>
-
-    <modules>
-        <module>sakai-evaluation-api</module>
-        <module>sakai-evaluation-impl</module>
-        <module>sakai-evaluation-pack</module>
-        <module>sakai-evaluation-tool</module>
-    </modules>
 
     <profiles>
         <profile>
@@ -105,6 +99,53 @@
                 <module>impl/src/ddl</module>
             </modules>
         </profile>
+        <profile>
+          <id>sakai-12</id>
+          <activation>
+            <activeByDefault>true</activeByDefault>
+            <property><name>sakai-12</name></property>
+          </activation>
+            <modules>
+                <module>sakai-evaluation-api</module>
+                <module>sakai-evaluation-impl</module>
+                <module>sakai-evaluation-pack</module>
+                <module>sakai-evaluation-tool</module>
+            </modules>
+          
+          <!-- Spring & Hibernate -->
+          <dependencies>
+            <dependency>
+              <groupId>org.hibernate</groupId>
+              <artifactId>hibernate-core</artifactId>
+            </dependency>
+            <!-- needed by hibernate unit tests -->
+            <dependency>
+              <groupId>org.hibernate</groupId>
+              <artifactId>hibernate-ehcache</artifactId>
+            </dependency>
+            <dependency>
+              <groupId>org.springframework</groupId>
+              <artifactId>spring-core</artifactId>
+            </dependency>
+            <dependency>
+              <groupId>org.springframework</groupId>
+              <artifactId>spring-beans</artifactId>
+            </dependency>
+            <dependency>
+              <groupId>org.springframework</groupId>
+              <artifactId>spring-orm</artifactId>
+            </dependency>
+            <dependency>
+              <groupId>org.springframework</groupId>
+              <artifactId>spring-context</artifactId>
+            </dependency>
+            <dependency>
+              <groupId>org.quartz-scheduler</groupId>
+              <artifactId>quartz</artifactId>
+            </dependency>
+          </dependencies>
+        </profile>
+
     </profiles>
 
     <!-- handles the management of all related dependencies -->
@@ -150,39 +191,6 @@
         	</dependency>
         </dependencies>
     </dependencyManagement>
-
-    <!-- Spring & Hibernate -->
-    <dependencies>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-core</artifactId>
-        </dependency>
-        <!-- needed by hibernate unit tests -->
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-ehcache</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-beans</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-orm</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.quartz-scheduler</groupId>
-            <artifactId>quartz</artifactId>
-        </dependency>
-    </dependencies>
 
     <!-- Project developers -->
     <developers>
