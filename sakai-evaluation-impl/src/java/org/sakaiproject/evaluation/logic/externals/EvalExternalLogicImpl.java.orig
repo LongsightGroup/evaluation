@@ -30,7 +30,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.UUID;
 
 import javax.mail.internet.AddressException;
@@ -561,8 +560,6 @@ public class EvalExternalLogicImpl implements EvalExternalLogic {
         }
 
         EvalGroup c = null;
-        // Set more information inside a Survey (Term, Site, ...)
-        StringJoiner evalContext = new StringJoiner(",");
 
         if (c == null) {
             // check Sakai
@@ -571,18 +568,7 @@ public class EvalExternalLogicImpl implements EvalExternalLogic {
                 // first we try to go straight to the siteService which is fastest
                 if (evalGroupId.contains(EvalConstants.GROUP_ID_GROUP_PREFIX)) {
                     Group group = siteService.findGroup(evalGroupId);
-                    //Add the site term and the title to the survey
-                    String siteTerm = group.getContainingSite().getProperties().getProperty(Site.PROP_SITE_TERM);
-                    String siteTitle = group.getContainingSite().getTitle();
-                    if(StringUtils.isNotEmpty(siteTerm)){
-                        evalContext.add(siteTerm);
-                    }
-                    if(StringUtils.isNotEmpty(siteTitle)){
-                        evalContext.add(siteTitle);
-                    }
-                    //Finally add the group title
-                    evalContext.add(group.getTitle());
-                    c = new EvalGroup( evalGroupId, evalContext.toString(), 
+                    c = new EvalGroup( evalGroupId, group.getTitle(), 
                             getContextType(SAKAI_GROUP_TYPE) );
                 }
                 
@@ -597,27 +583,12 @@ public class EvalExternalLogicImpl implements EvalExternalLogic {
                         String realmID = siteService.siteReference( siteID );
                         Set<String> sectionIds = authzGroupService.getProviderIds( realmID );
 
-                        try {
-                            //Add the site term and the title to the survey
-                            Site site = siteService.getSite(siteID);
-                            String siteTerm = site.getProperties().getProperty(Site.PROP_SITE_TERM);
-                            String siteTitle = site.getTitle();
-                            if(StringUtils.isNotEmpty(siteTerm)){
-                                evalContext.add(siteTerm);
-                            }
-                            if(StringUtils.isNotEmpty(siteTitle)){
-                                evalContext.add(siteTitle);
-                            }
-                        } catch (IdUnusedException e) {
-                        }
                         // Loop through the section IDs, if one matches the section ID contained in the evalGroupID, create an EvalGroup object for it
                         for( String secID : sectionIds )
                         {
                             if( secID.equalsIgnoreCase( sectionID ) )
                             {
-                                //Finally add the section title
-                                evalContext.add(courseManagementService.getSection( secID ).getTitle());
-                                c = new EvalGroup( evalGroupId, evalContext.toString(), getContextType( SAKAI_SECTION_TYPE ) );
+                                c = new EvalGroup( evalGroupId, courseManagementService.getSection( secID ).getTitle(), getContextType( SAKAI_SECTION_TYPE ) );
                             }
                         }
                     }
@@ -627,13 +598,7 @@ public class EvalExternalLogicImpl implements EvalExternalLogic {
                     String siteId = evalGroupId.substring(6);
                     try {
                         Site site = siteService.getSite(siteId);
-                        //Add the site term if is not empty
-                        String siteTerm = site.getProperties().getProperty(Site.PROP_SITE_TERM);
-                        if(StringUtils.isNotEmpty(siteTerm)){
-                            evalContext.add(siteTerm);
-                        }
-                        evalContext.add(site.getTitle());
-                        c = new EvalGroup( evalGroupId, evalContext.toString(), 
+                        c = new EvalGroup( evalGroupId, site.getTitle(), 
                                 getContextType(SAKAI_SITE_TYPE) );
                     } catch (IdUnusedException e) {
                         c = null;
@@ -644,25 +609,11 @@ public class EvalExternalLogicImpl implements EvalExternalLogic {
                     Object entity = entityBroker.fetchEntity(evalGroupId);
                     if (entity instanceof Site) {
                         Site site = (Site) entity;
-                        String siteTerm = site.getProperties().getProperty(Site.PROP_SITE_TERM);
-                        if(StringUtils.isNotEmpty(siteTerm)){
-                            evalContext.add(siteTerm);
-                        }
-                        evalContext.add(site.getTitle());
-                        c = new EvalGroup( evalGroupId, evalContext.toString(), 
+                        c = new EvalGroup( evalGroupId, site.getTitle(), 
                                 getContextType(SAKAI_SITE_TYPE) );
                     } else if (entity instanceof Group) {
                         Group group = (Group) entity;
-                        String siteTerm = group.getContainingSite().getProperties().getProperty(Site.PROP_SITE_TERM);
-                        String siteTitle = group.getContainingSite().getTitle();
-                        if(StringUtils.isNotEmpty(siteTerm)){
-                            evalContext.add(siteTerm);
-                        }
-                        if(StringUtils.isNotEmpty(siteTitle)){
-                            evalContext.add(siteTitle);
-                        }
-                        evalContext.add(group.getTitle());
-                        c = new EvalGroup( evalGroupId, evalContext.toString(), 
+                        c = new EvalGroup( evalGroupId, group.getTitle(), 
                                 getContextType(SAKAI_GROUP_TYPE) );
                     }
                 }
