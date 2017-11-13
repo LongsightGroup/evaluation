@@ -203,7 +203,7 @@ public class ControlEvaluationsProducer extends EvalCommonProducer implements Vi
             UIInternalLink.make(evaluationRow, "inqueue-eval-delete-link", UIMessage.make("general.command.delete"),
                   new EvalViewParameters( RemoveEvalProducer.VIEW_ID, evaluation.getId() ) );
 
-            humanDateRenderer.renderDate(evaluationRow, "partial-eval-created", evaluation.getLastModified());
+            humanDateRenderer.renderDate(evaluationRow, "partial-eval-modified", evaluation.getLastModified());
          }
       }
 
