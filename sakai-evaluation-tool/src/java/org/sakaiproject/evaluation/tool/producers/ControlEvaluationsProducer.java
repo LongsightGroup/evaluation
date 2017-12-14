@@ -40,6 +40,7 @@ import uk.org.ponder.rsf.viewstate.ViewParamsReporter;
 
 import java.text.DateFormat;
 import java.util.*;
+import org.sakaiproject.evaluation.logic.model.EvalGroup;
 
 /**
  * This lists evaluations for users so they can add, modify, remove them
