@@ -556,19 +556,7 @@ public class EvalExternalLogicImpl implements EvalExternalLogic {
                 // first we try to go straight to the siteService which is fastest
                 if (evalGroupId.contains(EvalConstants.GROUP_ID_GROUP_PREFIX)) {
                     Group group = siteService.findGroup(evalGroupId);
-                    //Add the title and the short description of the to the survey
-                    String siteTitle = group.getContainingSite().getTitle();
-                    String siteShortDescription = group.getContainingSite().getShortDescription();
-                    if(StringUtils.isNotEmpty(siteShortDescription)){
-                        evalContext.add(siteShortDescription);
-                    } else{
-                        if(StringUtils.isNotEmpty(siteTitle)){
-                            evalContext.add(siteTitle);
-                        }
-                    }
-                    //Finally add the group title
-                    evalContext.add(group.getTitle());
-                    c = new EvalGroup( evalGroupId, evalContext.toString(), 
+                    c = new EvalGroup( evalGroupId, group.getTitle(), 
                             getContextType(SAKAI_GROUP_TYPE) );
                 }
                 
@@ -583,20 +571,6 @@ public class EvalExternalLogicImpl implements EvalExternalLogic {
                         String realmID = siteService.siteReference( siteID );
                         Set<String> sectionIds = authzGroupService.getProviderIds( realmID );
 
-                        try {
-                            //Add the title and the short description of the to the survey
-                            Site site = siteService.getSite(siteID);
-                            String siteTitle = site.getTitle();
-                            String siteShortDescription = site.getShortDescription();
-                            if(StringUtils.isNotEmpty(siteShortDescription)){
-                                evalContext.add(siteShortDescription);
-                            }else{
-                                if(StringUtils.isNotEmpty(siteTitle)){
-                                    evalContext.add(siteTitle);
-                                }
-                            }
-                        } catch (IdUnusedException e) {
-                        }
                         // Loop through the section IDs, if one matches the section ID contained in the evalGroupID, create an EvalGroup object for it
                         for( String secID : sectionIds )
                         {
@@ -612,13 +586,7 @@ public class EvalExternalLogicImpl implements EvalExternalLogic {
                     String siteId = evalGroupId.substring(6);
                     try {
                         Site site = siteService.getSite(siteId);
-                        //Add the short description if is not empty
-                        String siteShortDescription = site.getShortDescription();
-                        if(StringUtils.isNotEmpty(siteShortDescription)){
-                            evalContext.add(siteShortDescription);
-                        }
-                        evalContext.add(site.getTitle());
-                        c = new EvalGroup( evalGroupId, evalContext.toString(), 
+                        c = new EvalGroup( evalGroupId, site.getTitle(), 
                                 getContextType(SAKAI_SITE_TYPE) );
                     } catch (IdUnusedException e) {
                         c = null;
@@ -629,28 +597,11 @@ public class EvalExternalLogicImpl implements EvalExternalLogic {
                     Object entity = entityBroker.fetchEntity(evalGroupId);
                     if (entity instanceof Site) {
                         Site site = (Site) entity;
-                        //Add the short description if is not empty
-                        String siteShortDescription = site.getShortDescription();
-                        if(StringUtils.isNotEmpty(siteShortDescription)){
-                            evalContext.add(siteShortDescription);
-                        }
-                        evalContext.add(site.getTitle());
-                        c = new EvalGroup( evalGroupId, evalContext.toString(), 
+                        c = new EvalGroup( evalGroupId, site.getTitle(), 
                                 getContextType(SAKAI_SITE_TYPE) );
                     } else if (entity instanceof Group) {
                         Group group = (Group) entity;
-                        //Add the short description if is not empty
-                        String siteShortDescription = group.getContainingSite().getShortDescription();
-                        String siteTitle = group.getContainingSite().getTitle();
-                        if(StringUtils.isNotEmpty(siteShortDescription)){
-                            evalContext.add(siteShortDescription);
-                        }else{
-                            if(StringUtils.isNotEmpty(siteTitle)){
-                                evalContext.add(siteTitle);
-                            }
-                        }
-                        evalContext.add(group.getTitle());
-                        c = new EvalGroup( evalGroupId, evalContext.toString(), 
+                        c = new EvalGroup( evalGroupId, group.getTitle(), 
                                 getContextType(SAKAI_GROUP_TYPE) );
                     }
                 }
